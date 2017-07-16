@@ -1,21 +1,20 @@
-import configparser
 import os
-import argparse
-import configparser
 import time
+
+import argparse
+from configobj import ConfigObj
 
 import requests
 
 from json import loads as jload
 
 defaultconfig = '''
-# WARNING: COMMENTS IN THIS FILE WILL BE ERASED WHEN PROGRAM IS RUN!
 [Connection]
 # Specify the URL to the drone server, including port and protocol
 host = https://drone.example.org
 auth_key = eyJEXAMPLE.AUTH.KEY
 # Specified in seconds (Default: 300)
-# sleep_time = 300
+#sleep_time = 300
 
 #[ExampleGitHubBuild]
 # Example shown uses githubs api to find and compare on the sha of the latest commit
@@ -26,7 +25,7 @@ auth_key = eyJEXAMPLE.AUTH.KEY
 #url = https://api.github.com/repos/Kaylee/ShinyRepo/git/refs/heads/master
 
 # JSON Tree needed to resolve the value.
-# structure = object.sha
+#structure = object.sha
 
 
 #[ExampleGitHubRelease]
@@ -82,23 +81,22 @@ if __name__ == '__main__':
         c.close()
         exit(78)  # 78 is the exit code for invalid config
 
-    config = configparser.ConfigParser()
-    config.read(filepath + '/dronetrigger.cfg')
+    config = ConfigObj(filepath + '/dronetrigger.cfg')
     if not ('Connection' in config):
         print('Error: Connection block not found, please check your config')
         exit(78)
     if not (config['Connection'].get('host', False)) or not (config['Connection'].get('auth_key', False)):
         print('Error: Missing connection details. please check your config')
         exit(78)
-    if (len(config.sections()) < 2):
+    if (len(config) < 2):
         print('Error: Please configure some monitoring blocks!')
         exit(78)
     # These can be assumed since we have verified
     drone_host = config['Connection']['host']
     drone_auth_key = config['Connection']['auth_key']
-    sleep_time = config['Connection'].getint('sleep_time', 300)
+    sleep_time = int(config['Connection'].get('sleep_time', 300))
 
-    for service in config.sections():
+    for service in config:
         if service == 'Connection':
             continue
         if not (config[service].get('url', False)) or not (config[service].get('structure', False)) or not(config[service].get('drone_repo'), False):
@@ -113,11 +111,10 @@ if __name__ == '__main__':
         if not (config[service].get('current_value', False)):
             print('Writing Initial value for ' + service + ': ' + curr_value)
             config[service]['current_value'] = curr_value
-            with open(filepath + '/dronetrigger.cfg', 'w') as configfile:
-                config.write(configfile)
+            config.write()
 
     while(True):
-        for service in config.sections():
+        for service in config:
             if service == 'Connection':
                 continue
             try:
