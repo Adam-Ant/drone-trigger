@@ -29,6 +29,8 @@ auth_key = eyJEXAMPLE.AUTH.KEY
 # JSON Tree needed to resolve the value.
 #structure = object.sha
 
+# Branch to use for deciding which drone build to fork and trigger (Default: master)
+#branch = master
 
 #[ExampleGitHubRelease]
 #drone_repo = Example/HelloRelease
@@ -37,11 +39,19 @@ auth_key = eyJEXAMPLE.AUTH.KEY
 '''
 
 
-def runbuild(repo: str):
+def runbuild(repo: str, branch: str):
     url = drone_host + '/api/repos/' + repo
-    latest = jload(requests.get(url + '/builds/latest',
-                                headers={'Authorization': auth}).text)['number']
-    buildurl = url + '/builds/' + str(latest) + '?fork=true'
+    latest = jload(requests.get(url + '/builds/latest', headers={'Authorization': auth}).text)
+    build_num = False
+    if (latest['branch'] != branch):
+        while not build_num:
+            latest = jload(requests.get(url + '/builds/' + str(latest['number'] - 1), headers={'Authorization': auth}).text)
+            if (latest['branch'] == branch):
+                build_num = str(latest['number'])
+    else:
+        build_num = str(latest['number'])
+
+    buildurl = url + '/builds/' + build_num + '?fork=true'
     # [[TODO]] Add functionality for checking if build was triggered successfully?
     return (requests.post(buildurl, headers={'Authorization': drone_auth_key}))
 
@@ -124,9 +134,12 @@ if __name__ == '__main__':
                 r.raise_for_status()
                 new_value = jsonVal(r.text, config[service].get('structure'))
                 if (new_value != config[service]['current_value']):
-                    print(date.strftime("%d/%m/%Y %H:%M:%S") +
-                          ': Got new build - ' + new_value)
-                    runbuild(config[service].get('drone_repo'))
+                    print(date.strftime("%d/%m/%Y %H:%M:%S") + ': Got new build - ' + new_value)
+                    if not (config[service].get('branch', False)):
+                        branch = 'master'
+                    else:
+                        branch = config[service]['branch']
+                    runbuild(config[service].get('drone_repo'), branch)
                     config[service]['current_value'] = new_value
                     with open(filepath + '/dronetrigger.cfg', 'w') as configfile:
                         config.write(configfile)
