@@ -41,11 +41,11 @@ auth_key = eyJEXAMPLE.AUTH.KEY
 
 def runbuild(repo: str, branch: str):
     url = drone_host + '/api/repos/' + repo
-    latest = jload(requests.get(url + '/builds/latest', headers={'Authorization': auth}).text)
+    latest = jload(requests.get(url + '/builds/latest', headers={'Authorization': drone_auth_key}).text)
     build_num = False
     if (latest['branch'] != branch):
         while not build_num:
-            latest = jload(requests.get(url + '/builds/' + str(latest['number'] - 1), headers={'Authorization': auth}).text)
+            latest = jload(requests.get(url + '/builds/' + str(latest['number'] - 1), headers={'Authorization': drone_auth_key}).text)
             if (latest['branch'] == branch):
                 build_num = str(latest['number'])
     else:
@@ -134,7 +134,7 @@ if __name__ == '__main__':
                 r.raise_for_status()
                 new_value = jsonVal(r.text, config[service].get('structure'))
                 if (new_value != config[service]['current_value']):
-                    print(date.strftime("%d/%m/%Y %H:%M:%S") + ': Got new build - ' + new_value)
+                    print(time.strftime("%d/%m/%Y %H:%M:%S") + ': Got new build - ' + new_value)
                     if not (config[service].get('branch', False)):
                         branch = 'master'
                     else:
@@ -142,7 +142,7 @@ if __name__ == '__main__':
                     if (runbuild(config[service].get('drone_repo'), branch)):
                         config[service]['current_value'] = new_value
                         with open(filepath + '/dronetrigger.cfg', 'w') as configfile:
-                            config.write(configfile)
+                            config.write()
                         print("Successfully build new version for " + service)
 
             except:
