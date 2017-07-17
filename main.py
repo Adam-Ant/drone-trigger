@@ -139,10 +139,11 @@ if __name__ == '__main__':
                         branch = 'master'
                     else:
                         branch = config[service]['branch']
-                    runbuild(config[service].get('drone_repo'), branch)
-                    config[service]['current_value'] = new_value
-                    with open(filepath + '/dronetrigger.cfg', 'w') as configfile:
-                        config.write(configfile)
+                    if (runbuild(config[service].get('drone_repo'), branch)):
+                        config[service]['current_value'] = new_value
+                        with open(filepath + '/dronetrigger.cfg', 'w') as configfile:
+                            config.write(configfile)
+                        print("Successfully build new version for " + service)
 
             except:
                 raise
