@@ -9,4 +9,4 @@ RUN apk add --no-cache python3 py3-pip tini\
 
 VOLUME ["/config"]
 
-CMD ["/sbin/tini","--","python3","main.py","-c","/config"]
+CMD ["/sbin/tini","--","python3","-u","main.py","-c","/config"]
