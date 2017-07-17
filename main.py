@@ -10,30 +10,33 @@ import requests
 
 from json import loads as jload
 
-defaultconfig = '''
-[Connection]
+defaultconfig = '''[Connection]
 # Specify the URL to the drone server, including port and protocol
 host = https://drone.example.org
+
+# Auth key found on your Drone account page
 auth_key = eyJEXAMPLE.AUTH.KEY
+
+# Time to wait between checks. Note that too low may ban you from the api, especially on GitHub
 # Specified in seconds (Default: 300)
 #sleep_time = 300
 
 #[ExampleGitHubBuild]
 # Example shown uses githubs api to find and compare on the sha of the latest commit
+
 # Name of the repo to trigger in drone
 #drone_repo = Example/HelloWorld
-
-# URL of the json structure that needs curling
-#url = https://api.github.com/repos/Kaylee/ShinyRepo/git/refs/heads/master
-
-# JSON Tree needed to resolve the value.
-#structure = object.sha
-
 # Branch to use for deciding which drone build to fork and trigger (Default: master)
 #branch = master
 
+# URL of the json structure to check against
+#url = https://api.github.com/repos/Kaylee/ShinyRepo/git/refs/heads/master
+# JSON Tree needed to resolve the value.
+#structure = object.sha
+
 #[ExampleGitHubRelease]
 #drone_repo = Example/HelloRelease
+#branch = release
 #url = https://api.github.com/repos/Kaylee/ShinyRepo/releases/latest
 #structure = name
 '''
