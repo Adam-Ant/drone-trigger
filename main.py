@@ -145,7 +145,11 @@ if __name__ == '__main__':
         for service in config:
             if service == 'Connection':
                 continue
-            new_value = jsonVal(config[service].get('url'), config[service].get('structure'))
+            
+            try:
+                new_value = jsonVal(config[service].get('url'), config[service].get('structure'))
+            except:
+                continue
 
             if (new_value != config[service]['current_value']):
                 print('[' + time.strftime("%d/%m/%Y %H:%M:%S") + '] Got new build - ' + new_value)
@@ -157,6 +161,6 @@ if __name__ == '__main__':
                     config[service]['current_value'] = new_value
                     with open(filepath + '/dronetrigger.cfg', 'w') as configfile:
                         config.write()
-                    print("Successfully build new version for " + service)
+                    print('[' + time.strftime("%d/%m/%Y %H:%M:%S") + '] Successfully sent new build for ' + service)
 
         time.sleep(sleep_time)
