@@ -8,7 +8,7 @@ from configobj import ConfigObj
 
 import requests
 
-from json import loads as jload
+import json
 
 defaultconfig = '''[Connection]
 # Specify the URL to the drone server, including port and protocol
@@ -44,11 +44,11 @@ auth_key = eyJEXAMPLE.AUTH.KEY
 
 def runbuild(repo: str, branch: str):
     url = drone_host + '/api/repos/' + repo
-    latest = jload(requests.get(url + '/builds/latest', headers={'Authorization': drone_auth_key}).text)
+    latest = json.loads(requests.get(url + '/builds/latest', headers={'Authorization': drone_auth_key}).text)
     build_num = False
     if (latest['branch'] != branch):
         while not build_num:
-            latest = jload(requests.get(url + '/builds/' + str(latest['number'] - 1), headers={'Authorization': drone_auth_key}).text)
+            latest = json.loads(requests.get(url + '/builds/' + str(latest['number'] - 1), headers={'Authorization': drone_auth_key}).text)
             if (latest['branch'] == branch):
                 build_num = str(latest['number'])
     else:
@@ -59,17 +59,31 @@ def runbuild(repo: str, branch: str):
     return (requests.post(buildurl, headers={'Authorization': drone_auth_key}))
 
 
-def jsonVal(jraw, struct):
+def jsonVal(url, struct):
     try:
-        dataDict = jload(jraw)
+        r = requests.get(url)
+        r.raise_for_status()
+        jsondata = r.text        
+    except requests.HTTPError as e:
+        print('[' + time.strftime("%d/%m/%Y %H:%M:%S") + '] ERROR: Got Response code ' + str(e.response.status_code) + ' for URL ' + str(url))
+        raise e
+
+    try:
+        dataDict = json.loads(jsondata)
+    except json.decoder.JSONDecodeError as e:
+        # Probably Not Valid JSON?
+        print('[' + time.strftime("%d/%m/%Y %H:%M:%S") + '] ERROR: Could not decode JSON: ')
+        print(jsondata)
+        raise e
+
+
+    try:
         for i in struct.split('.'):
             dataDict = dataDict[i]
         return dataDict
     except KeyError:
         print('Error: Invalid structure: ' + struct)
         print(dataDict)
-        exit(1)
-    except:
         raise
 
 
@@ -117,13 +131,12 @@ if __name__ == '__main__':
         if not (config[service].get('url', False)) or not (config[service].get('structure', False)) or not(config[service].get('drone_repo'), False):
             print('Error: Missing required value in status block ' + service)
             exit(78)
-        try:
-            r = requests.get(config[service].get('url'))
-            r.raise_for_status()
-            curr_value = jsonVal(r.text, config[service].get('structure'))
-        except:
-            raise
+
         if not (config[service].get('current_value', False)):
+            try:
+                curr_value = jsonVal(config[service].get('url'), config[service].get('structure'))
+            except:
+                exit(1)
             print('Writing Initial value for ' + service + ': ' + curr_value)
             config[service]['current_value'] = curr_value
             config.write()
@@ -132,22 +145,18 @@ if __name__ == '__main__':
         for service in config:
             if service == 'Connection':
                 continue
-            try:
-                r = requests.get(config[service].get('url'))
-                r.raise_for_status()
-                new_value = jsonVal(r.text, config[service].get('structure'))
-                if (new_value != config[service]['current_value']):
-                    print(time.strftime("%d/%m/%Y %H:%M:%S") + ': Got new build - ' + new_value)
-                    if not (config[service].get('branch', False)):
-                        branch = 'master'
-                    else:
-                        branch = config[service]['branch']
-                    if (runbuild(config[service].get('drone_repo'), branch)):
-                        config[service]['current_value'] = new_value
-                        with open(filepath + '/dronetrigger.cfg', 'w') as configfile:
-                            config.write()
-                        print("Successfully build new version for " + service)
+            new_value = jsonVal(config[service].get('url'), config[service].get('structure'))
 
-            except:
-                raise
+            if (new_value != config[service]['current_value']):
+                print('[' + time.strftime("%d/%m/%Y %H:%M:%S") + '] Got new build - ' + new_value)
+                if not (config[service].get('branch', False)):
+                    branch = 'master'
+                else:
+                    branch = config[service]['branch']
+                if (runbuild(config[service].get('drone_repo'), branch)):
+                    config[service]['current_value'] = new_value
+                    with open(filepath + '/dronetrigger.cfg', 'w') as configfile:
+                        config.write()
+                    print("Successfully build new version for " + service)
+
         time.sleep(sleep_time)
