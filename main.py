@@ -139,6 +139,7 @@ if __name__ == '__main__':
             try:
                 curr_value = jsonVal(config[service].get('url'), config[service].get('structure'))
             except:
+                print('Error: Could not get current value for ' + service)
                 exit(1)
             print('Writing Initial value for ' + service + ': ' + curr_value)
             config[service]['current_value'] = curr_value
