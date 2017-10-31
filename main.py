@@ -79,9 +79,12 @@ def jsonVal(url, struct):
 
     try:
         for i in struct.split('.'):
-            dataDict = dataDict[i]
+            if i.isdigit():
+                dataDict = dataDict[int(i)]
+            else:
+                dataDict = dataDict[i]
         return dataDict
-    except KeyError:
+    except:
         print('Error: Invalid structure: ' + struct)
         print(dataDict)
         raise
