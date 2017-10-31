@@ -79,9 +79,12 @@ def jsonVal(url, struct):
 
     try:
         for i in struct.split('.'):
-            dataDict = dataDict[i]
+            if i.isdigit():
+                dataDict = dataDict[int(i)]
+            else:
+                dataDict = dataDict[i]
         return dataDict
-    except KeyError:
+    except:
         print('Error: Invalid structure: ' + struct)
         print(dataDict)
         raise
@@ -136,6 +139,7 @@ if __name__ == '__main__':
             try:
                 curr_value = jsonVal(config[service].get('url'), config[service].get('structure'))
             except:
+                print('Error: Could not get current value for ' + service)
                 exit(1)
             print('Writing Initial value for ' + service + ': ' + curr_value)
             config[service]['current_value'] = curr_value
